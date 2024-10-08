@@ -22,7 +22,11 @@ onMount(() => {
   isMounted = true;
 
   return rpcBrowser.subscribe(Messages.MSG_NAVIGATE_BUILD, (x: string) => {
-    router.goto(`/build/${x}`);
+    if (x.length === 1) {
+      router.goto(`/${x}`);
+    } else {
+      router.goto(`/build/${x}`);
+    }
   });
 });
 </script>
@@ -32,6 +36,18 @@ onMount(() => {
     <div class="flex flex-row w-full h-full overflow-hidden">
       <Route path="/" breadcrumb="Bootable Containers">
         <Homepage />
+      </Route>
+      <Route path="/0" breadcrumb="Bootable Containers">
+        <Homepage />
+      </Route>
+      <Route path="/1" breadcrumb="Bootable Containers">
+        <Homepage />
+      </Route>
+      <Route path="/2" breadcrumb="Bootable Containers">
+        <Build />
+      </Route>
+      <Route path="/3" breadcrumb="Bootable Containers">
+        <DiskImageDetails id="xx" />
       </Route>
       <Route path="/build" breadcrumb="Build">
         <Build />

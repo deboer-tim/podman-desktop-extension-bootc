@@ -52,9 +52,50 @@ export async function activate(extensionContext: ExtensionContext): Promise<void
 
   const panel = extensionApi.window.createWebviewPanel('bootc', 'Bootable Containers', {
     localResourceRoots: [extensionApi.Uri.joinPath(extensionContext.extensionUri, 'media')],
+    pages: ['Bootable Containers', 'Samples', 'Disk Images'],
   });
   extensionContext.subscriptions.push(panel);
 
+  await updatePanelContents(panel, extensionContext, '1');
+
+  // new webviews
+  /*const panel2 = extensionApi.window.createWebviewPanel('bootc2', 'Samples', {
+    localResourceRoots: [extensionApi.Uri.joinPath(extensionContext.extensionUri, 'media')],
+  });
+  extensionContext.subscriptions.push(panel2);
+  await updatePanelContents(panel2, extensionContext, '2');
+
+  const panel3 = extensionApi.window.createWebviewPanel('bootc3', 'Disk Images', {
+    localResourceRoots: [extensionApi.Uri.joinPath(extensionContext.extensionUri, 'media')],
+  });
+  extensionContext.subscriptions.push(panel3);
+  await updatePanelContents(panel3, extensionContext, '3');*/
+
+  // Register the 'api' for the webview to communicate to the backend
+  const rpcExtension = new RpcExtension(panel.webview);
+  const bootcApi = new BootcApiImpl(extensionContext, panel.webview);
+  rpcExtension.registerInstance<BootcApiImpl>(BootcApiImpl, bootcApi);
+
+  // Create the historyNotifier and push to subscriptions
+  // so the frontend can be notified when the history changes and so we can update the UI / call listHistoryInfo
+  const historyNotifier = new HistoryNotifier(panel.webview, extensionContext.storagePath);
+  extensionContext.subscriptions.push(historyNotifier);
+
+  extensionContext.subscriptions.push(
+    extensionApi.commands.registerCommand('bootc.image.build', async image => {
+      await openBuildPage(panel, image);
+    }),
+    extensionApi.commands.registerCommand('bootc.navigate', async x => {
+      await openPanel(panel, x);
+    }),
+  );
+}
+
+async function updatePanelContents(
+  panel: extensionApi.WebviewPanel,
+  extensionContext: ExtensionContext,
+  x: string,
+): Promise<void> {
   const indexHtmlUri = extensionApi.Uri.joinPath(extensionContext.extensionUri, 'media', 'index.html');
   const indexHtmlPath = indexHtmlUri.fsPath;
   let indexHtml = await fs.promises.readFile(indexHtmlPath, 'utf8');
@@ -94,22 +135,13 @@ export async function activate(extensionContext: ExtensionContext): Promise<void
 
   // Update the html
   panel.webview.html = indexHtml;
-
-  // Register the 'api' for the webview to communicate to the backend
-  const rpcExtension = new RpcExtension(panel.webview);
-  const bootcApi = new BootcApiImpl(extensionContext, panel.webview);
-  rpcExtension.registerInstance<BootcApiImpl>(BootcApiImpl, bootcApi);
-
-  // Create the historyNotifier and push to subscriptions
-  // so the frontend can be notified when the history changes and so we can update the UI / call listHistoryInfo
-  const historyNotifier = new HistoryNotifier(panel.webview, extensionContext.storagePath);
-  extensionContext.subscriptions.push(historyNotifier);
-
-  extensionContext.subscriptions.push(
-    extensionApi.commands.registerCommand('bootc.image.build', async image => {
-      await openBuildPage(panel, image);
-    }),
-  );
+  panel.onDidChangeViewState(e => {
+    console.log('state changed! ' + x + ' ' + e.webviewPanel);
+    openPanel(panel, x);
+  });
+  panel.webview.onDidReceiveMessage(m => {
+    console.log('received msg: ' + m);
+  });
 }
 
 function checkVersion(version: string): boolean {
@@ -123,6 +155,28 @@ function checkVersion(version: string): boolean {
   }
 
   return satisfies(current, engines['podman-desktop']);
+}
+
+async function openPanel(panel: extensionApi.WebviewPanel, x: string): Promise<void> {
+  // this should use webview reveal function in the future
+  const webviews = extensionApi.window.listWebviews();
+  const bootcWebView = (await webviews).find(webview => webview.viewType === 'bootc');
+
+  if (!bootcWebView) {
+    console.error('Could not find bootc webview');
+    return;
+  }
+
+  await extensionApi.navigation.navigateToWebview(bootcWebView.id);
+
+  // if we trigger immediately, the webview hasn't loaded yet and can't redirect
+  // if we trigger too slow, there's a visible flash as the homepage appears first
+  await new Promise(r => setTimeout(r, 100));
+
+  await panel.webview.postMessage({
+    id: Messages.MSG_NAVIGATE_BUILD,
+    body: encodeURIComponent(x),
+  });
 }
 
 export async function openBuildPage(
