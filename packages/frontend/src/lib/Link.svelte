@@ -3,10 +3,14 @@ import { router } from 'tinro';
 import { bootcClient } from '/@/api/client';
 import { Link } from '@podman-desktop/ui-svelte';
 
-export let internalRef: string | undefined = undefined;
-export let externalRef: string | undefined = undefined;
-export let folder: string | undefined = undefined;
-export let title: string | undefined = undefined;
+interface Props {
+  title?: string;
+  internalRef?: string;
+  externalRef?: string;
+  folder?: string;
+  ariaLabel?: string;
+}
+let { title, internalRef, externalRef, folder }: Props = $props();
 
 async function click(): Promise<void> {
   if (internalRef) {

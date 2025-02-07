@@ -2,18 +2,22 @@
 import { createRouteObject } from 'tinro/dist/tinro_lib';
 import type { TinroRouteMeta } from 'tinro';
 import { saveRouterState } from '../api/client';
+import type { Snippet } from 'svelte';
 
-export let path = '/*';
-export let fallback = false;
-export let redirect = false;
-export let firstmatch = false;
-export let breadcrumb: string | undefined = undefined;
+interface Props {
+  path: string;
+  fallback?: string;
+  redirect?: string;
+  firstmatch?: string;
+  breadcrumb?: string;
+  isAppMounted?: boolean;
+  children: Snippet<[{ params: Record<string, string>; meta: TinroRouteMeta }]>;
+}
+let { path = '/*', fallback, redirect, firstmatch, breadcrumb, isAppMounted, children }: Props = $props();
 
-export let isAppMounted: boolean = false;
-
-let showContent = false;
-let params: Record<string, string> = {};
-let meta: TinroRouteMeta = {} as TinroRouteMeta;
+let showContent = $state(false);
+let params: Record<string, string> = $state({});
+let meta: TinroRouteMeta = $state({} as TinroRouteMeta);
 
 const route = createRouteObject({
   fallback,
@@ -33,14 +37,16 @@ const route = createRouteObject({
   },
 });
 
-$: route.update({
-  path,
-  redirect,
-  firstmatch,
-  breadcrumb,
+$effect(() => {
+  route.update({
+    path,
+    redirect,
+    firstmatch,
+    breadcrumb,
+  });
 });
 </script>
 
 {#if showContent}
-  <slot params={params} meta={meta} />
+  {@render children({ params, meta })}
 {/if}
