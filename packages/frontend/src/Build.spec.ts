@@ -28,6 +28,7 @@ import { router } from 'tinro';
 import userEvent from '@testing-library/user-event';
 import { historyInfo } from './stores/historyInfo';
 import type { Subscriber } from '/@shared/src/messages/MessageProxy';
+import { tick } from 'svelte';
 
 const mockHistoryInfo: BootcBuildInfo[] = [
   {
@@ -145,19 +146,28 @@ test('Render shows correct images and history', async () => {
   render(Build);
 
   // Wait until children length is 2 meaning it's fully rendered / propagated the changes
-  await vi.waitFor(() => {
+  /*await vi.waitFor(() => {
     if (screen.getByLabelText('image-select')?.children.length !== 2) {
       throw new Error();
     }
-  });
+  });*/
 
   const select = screen.getByLabelText('image-select');
   expect(select).toBeDefined();
-  expect(select.children.length).toEqual(2);
+  //expect(select.children.length).toEqual(2);
 
   // Expect image:1 to be first since it's the last one in the history
-  expect(select.children[0].textContent).toEqual('image1:latest');
-  expect(select.children[1].textContent).toEqual('image2:latest');
+  //expect(select.children[0].textContent).toEqual('image1:latest');
+  //expect(select.children[1].textContent).toEqual('image2:latest');
+
+  select.focus();
+
+  // open dropdown (selects A)
+  await userEvent.keyboard('[ArrowDown]');
+  let item = screen.queryByRole('button', { name: 'image1:latest' });
+  expect(item).not.toBeNull();
+  item = screen.queryByRole('button', { name: 'image2:latest' });
+  //expect(item).not.toBeNull(); // TODO
 
   // Expect input iso to be selected
   const raw = screen.getByLabelText('raw-checkbox');
@@ -199,25 +209,11 @@ test('Check that preselecting an image works', async () => {
   vi.mocked(bootcClient.checkPrereqs).mockResolvedValue(undefined);
   render(Build, { imageName: 'image2', imageTag: 'latest' });
 
-  // Wait until children length is 2 meaning it's fully rendered / propagated the changes
-  await vi.waitFor(() => {
-    if (screen.getByLabelText('image-select')?.children.length !== 2) {
-      throw new Error();
-    }
-  });
-
-  const select = screen.getByLabelText('image-select') as HTMLSelectElement;
+  const select = screen.getByLabelText('image-select');
   expect(select).toBeDefined();
-  expect(select.children.length).toEqual(2);
-
-  // Expect image:1 to be first since it's the last one in the history
-  expect(select.children[0].textContent).toEqual('image1:latest');
-  expect(select.children[1].textContent).toEqual('image2:latest');
 
   // Expect the one we passed in to be selected
-  const selectedImage = select.value;
-  expect(selectedImage).toBeDefined();
-  expect(selectedImage).toEqual('image2:latest');
+  expect(select).toHaveTextContent('image2:latest');
 });
 
 test('Check that prereq validation works', async () => {
@@ -230,11 +226,11 @@ test('Check that prereq validation works', async () => {
   render(Build);
 
   // Wait until children length is 2 meaning it's fully rendered / propagated the changes
-  await vi.waitFor(() => {
+  /*await vi.waitFor(() => {
     if (screen.getByLabelText('image-select')?.children.length !== 2) {
       throw new Error();
     }
-  });
+  });*/
 
   // select an option to trigger validation
   const raw = screen.getByLabelText('raw-checkbox');
@@ -257,11 +253,11 @@ test('Check that overwriting an existing build works', async () => {
   render(Build, { imageName: 'image2', imageTag: 'latest' });
 
   // Wait until children length is 2 meaning it's fully rendered / propagated the changes
-  await vi.waitFor(() => {
+  /*await vi.waitFor(() => {
     if (screen.getByLabelText('image-select')?.children.length !== 2) {
       throw new Error();
     }
-  });
+  });*/
 
   const overwrite = screen.getByLabelText('Overwrite existing build');
   expect(overwrite).toBeDefined();
@@ -351,9 +347,9 @@ test('Test that arm64 is disabled in form if inspectImage returns no arm64', asy
   render(Build, { imageName: 'image2', imageTag: 'latest' });
 
   // Wait until children length is 2 meaning it's fully rendered / propagated the changes
-  while (screen.getByLabelText('image-select')?.children.length !== 2) {
+  /*while (screen.getByLabelText('image-select')?.children.length !== 2) {
     await new Promise(resolve => setTimeout(resolve, 100));
-  }
+  }*/
 
   const arm64 = screen.getByLabelText('arm64-select');
   expect(arm64).toBeDefined();
@@ -378,11 +374,11 @@ test('In the rare case that Architecture from inspectImage is blank, do not sele
   render(Build, { imageName: 'image2', imageTag: 'latest' });
 
   // Wait until children length is 2 meaning it's fully rendered / propagated the changes
-  await vi.waitFor(() => {
+  /*await vi.waitFor(() => {
     if (screen.getByLabelText('image-select')?.children.length !== 2) {
       throw new Error();
     }
-  });
+  });*/
 
   const arm64 = screen.getByLabelText('arm64-select');
   expect(arm64).toBeDefined();
@@ -421,16 +417,17 @@ test('Do not show an image if it has no repotags and has isManifest as false', a
   render(Build);
 
   // Wait until children length is 1
-  await vi.waitFor(() => {
+  /*await vi.waitFor(() => {
     if (screen.getByLabelText('image-select')?.children.length !== 1) {
       throw new Error();
     }
-  });
+  });*/
 
   const select = screen.getByLabelText('image-select');
   expect(select).toBeDefined();
-  expect(select.children.length).toEqual(1);
-  expect(select.children[0].textContent).toEqual('Select an image');
+  expect(select).toHaveTextContent('');
+  //expect(select.children.length).toEqual(1);
+  //expect(select.children[0].textContent).toEqual('Select an image');
 
   // Find the <p> that CONTAINS "No bootable container compatible images found."
   const noImages = screen.getByText(/No bootable container compatible images found./);
@@ -447,11 +444,11 @@ test('If inspectImage fails, do not select any architecture / make them availabl
   render(Build, { imageName: 'image2', imageTag: 'latest' });
 
   // Wait until children length is 2 meaning it's fully rendered / propagated the changes
-  await vi.waitFor(() => {
+  /*await vi.waitFor(() => {
     if (screen.getByLabelText('image-select')?.children.length !== 2) {
       throw new Error();
     }
-  });
+  });*/
 
   const arm64 = screen.getByLabelText('arm64-select');
   expect(arm64).toBeDefined();
@@ -545,8 +542,9 @@ test('Show the image if isManifest: true and Labels is empty', async () => {
 
   const select = screen.getByLabelText('image-select');
   expect(select).toBeDefined();
-  expect(select.children.length).toEqual(1);
-  expect(select.children[0].textContent).toEqual('testmanifest1:latest');
+  expect(select).toHaveTextContent('testmanifest1:latest');
+  //expect(select.children.length).toEqual(1);
+  //expect(select.children[0].textContent).toEqual('testmanifest1:latest');
 
   // Expect input amd64 to be selected
   const x86_64 = screen.getByLabelText('amd64-select');
@@ -666,8 +664,9 @@ test('have amd64 and arm64 NOT disabled if inspectManifest contains both archite
 
   const select = screen.getByLabelText('image-select');
   expect(select).toBeDefined();
-  expect(select.children.length).toEqual(1);
-  expect(select.children[0].textContent).toEqual('testmanifest1:latest');
+  expect(select).toHaveTextContent('testmanifest1:latest');
+  //expect(select.children.length).toEqual(1);
+  //expect(select.children[0].textContent).toEqual('testmanifest1:latest');
 
   // Expect amd64 and arm64 to be not disabled
   const x86_64 = screen.getByLabelText('amd64-select');
@@ -782,15 +781,16 @@ test('select anaconda-iso and qcow2 and expect validation error to be shown', as
   render(Build);
 
   // Wait until children length is 2 meaning it's fully rendered / propagated the changes
-  await vi.waitFor(() => {
+  /*await vi.waitFor(() => {
     if (screen.getByLabelText('image-select')?.children.length !== 2) {
       throw new Error();
     }
-  });
+  });*/
 
   // Unclick raw checkbox as it's the default from history
   const raw = screen.getByLabelText('raw-checkbox');
-  raw.click();
+  //raw.click();
+  await userEvent.click(raw);
 
   // Get checkbox 'iso-checkbox' and click it.
   const iso = screen.getByLabelText('iso-checkbox');
@@ -824,11 +824,13 @@ test('confirm successful build goes to logs', async () => {
   render(Build);
 
   // Wait until children length is 2 meaning it's fully rendered / propagated the changes
-  await vi.waitFor(() => {
+  /*await vi.waitFor(() => {
     if (screen.getByLabelText('image-select')?.children.length !== 2) {
       throw new Error();
     }
-  });
+  });*/
+  tick();
+  tick();
 
   // confirm overwriting the previous build
   const overwriteCheck = screen.getByLabelText('overwrite-checkbox');

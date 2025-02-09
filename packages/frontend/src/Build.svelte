@@ -3,8 +3,6 @@ import './app.css';
 import {
   faCaretDown,
   faCaretRight,
-  faCube,
-  faQuestionCircle,
   faTriangleExclamation,
   faMinusCircle,
   faPlusCircle,
@@ -16,17 +14,20 @@ import { onMount } from 'svelte';
 import type { ImageInfo, ManifestInspectInfo } from '@podman-desktop/api';
 import { router } from 'tinro';
 import DiskImageIcon from './lib/DiskImageIcon.svelte';
-import { Button, Input, EmptyScreen, FormPage, Checkbox, ErrorMessage } from '@podman-desktop/ui-svelte';
+import { Button, Input, EmptyScreen, FormPage, Checkbox, ErrorMessage, Dropdown } from '@podman-desktop/ui-svelte';
 import Link from './lib/Link.svelte';
 import { historyInfo } from '/@/stores/historyInfo';
 import { goToDiskImages } from './lib/navigation';
 
-export let imageName: string | undefined = undefined;
-export let imageTag: string | undefined = undefined;
+interface Props {
+  imageName?: string;
+  imageTag?: string;
+}
+let { imageName, imageTag }: Props = $props();
 
 // Image variables
-let selectedImage: string | undefined;
-let existingBuild: boolean = false;
+let selectedImage = $state<string>();
+let existingBuild = $state(false);
 
 // Architecture variable
 // This is an array as we will be support manifests
@@ -34,54 +35,54 @@ let existingBuild: boolean = false;
 // we will ONLY enable the architectures that are available in the image / manifest within the form.
 // this is to prevent the user from selecting an architecture that is not available in the image.
 // Will either be 'arm64' or 'amd64' as that is all we support for now.
-let availableArchitectures: string[] = [];
+let availableArchitectures = $state<string[]>([]);
 
 // Build options
-let buildFolder: string;
-let buildConfigFile: string;
-let buildChown: string;
-let buildType: BuildType[] = [];
-let buildArch: string | undefined;
-let buildFilesystem: string = ''; // Default filesystem auto-selected / empty
-let overwrite: boolean = false;
+let buildFolder = $state<string>();
+let buildConfigFile = $state<string>();
+let buildChown = $state<string>();
+let buildType = $state<BuildType[]>([]);
+let buildArch = $state<string>();
+let buildFilesystem = $state<string>(''); // Default filesystem auto-selected / empty
+let overwrite = $state(false);
 
 // Other variable
-let buildInProgress = false;
-let bootcAvailableImages: ImageInfo[] = [];
-let buildErrorMessage = '';
-let errorFormValidation: string | undefined = undefined;
+let buildInProgress = $state(false);
+let bootcAvailableImages = $state<ImageInfo[]>([]);
+let buildErrorMessage = $state<string>('');
+let errorFormValidation = $state<string>();
 
 // Specific to root filesystem selection
 // SPECIFICALLY fedora, where we **need** to select the filesystem, as it is not auto-selected.
 // this boolean will be set to true if the selected image is Fedora and shown as a warning to the user.
-let fedoraDetected = false;
-let isLinux: boolean;
+let fedoraDetected = $state(false);
+let isLinux = $state<boolean>();
 
 // AWS Related
-let awsAmiName: string = '';
-let awsBucket: string = '';
-let awsRegion: string = '';
+let awsAmiName = $state<string>('');
+let awsBucket = $state<string>('');
+let awsRegion = $state<string>('');
 
 // Build Config related, we only support one entry for now
-let buildConfigUsers: { name: string; password: string; key: string; groups: string }[] = [
+let buildConfigUsers = $state<{ name: string; password: string; key: string; groups: string }[]>([
   { name: '', password: '', key: '', groups: '' },
-];
-let buildConfigFilesystems: { mountpoint: string; minsize: string }[] = [{ mountpoint: '', minsize: '' }];
-let buildConfigKernelArguments: string;
+]);
+let buildConfigFilesystems = $state<{ mountpoint: string; minsize: string }[]>([{ mountpoint: '', minsize: '' }]);
+let buildConfigKernelArguments = $state<string>();
 
 // Show/hide advanced options
-let showAdvanced = false; // State to show/hide advanced options
+let showAdvanced = $state(false); // State to show/hide advanced options
 function toggleAdvanced(): void {
   showAdvanced = !showAdvanced;
 }
 
 // Show/hide build config options
-let showBuildConfig = false;
+let showBuildConfig = $state(false);
 function toggleBuildConfig(): void {
   showBuildConfig = !showBuildConfig;
 }
 
-let showBuildConfigFile = false;
+let showBuildConfigFile = $state(false);
 function toggleBuildConfigFile(): void {
   showBuildConfigFile = !showBuildConfigFile;
 }
@@ -257,7 +258,7 @@ async function buildBootcImage(): Promise<void> {
     imageId: image?.Id ?? '',
     tag: selectedImage.split(':')[1],
     engineId: image?.engineId ?? '',
-    folder: buildFolder,
+    folder: buildFolder ?? '',
     // If all the entries are empty, we will not provide the buildConfig
     buildConfig,
     buildConfigFilePath: buildConfigFile,
@@ -484,18 +485,23 @@ async function updateBuildType(type: BuildType, selected: boolean): Promise<void
 }
 
 // validate every time a selection changes in the form or available architectures
-$: if (selectedImage || buildFolder || buildArch || overwrite) {
+$effect(() => {
+if (selectedImage || buildFolder || buildArch || overwrite) {
   validate().catch((e: unknown) => console.error('error validating on change', e));
 }
+});
 
 // Each time an image is selected, we need to update the available architectures
 // to do that, inspect the image and get the architecture.
-$: if (selectedImage) {
+$effect(() => {
+if (selectedImage) {
   updateAvailableArchitectures(selectedImage).catch((e: unknown) => console.error('error updating architectures', e));
   detectFedoraImageFilesystem(selectedImage).catch((e: unknown) => console.error('error detecting filesystem', e));
 }
+});
 
-$: if (availableArchitectures) {
+$effect(() => {
+if (availableArchitectures) {
   if (availableArchitectures.length === 1) {
     // If there is only ONE available architecture, select it automatically.
     buildArch = availableArchitectures[0];
@@ -506,6 +512,7 @@ $: if (availableArchitectures) {
     buildArch = undefined;
   }
 }
+});
 </script>
 
 <FormPage
@@ -536,46 +543,19 @@ $: if (availableArchitectures) {
         <div class={buildInProgress ? 'opacity-40 pointer-events-none' : ''}>
           <div class="pb-4">
             <label for="modalImageTag" class="block mb-2 font-semibold">Bootable container image</label>
-            <div class="relative">
-              <!-- Container with relative positioning -->
-              <select
-                class="rounded-lg block w-full p-2.5 bg-charcoal-600 pl-8 border-r-8 border-transparent outline-1 outline outline-gray-900 placeholder-gray-700 text-white"
-                name="imageChoice"
-                aria-label="image-select"
-                bind:value={selectedImage}>
-                <!-- Options go here -->
-                {#if !selectedImage}
-                  <option value="" disabled selected>Select an image</option>
-                {/if}
-                {#if bootcAvailableImages.length > 0}
-                  {#each bootcAvailableImages as image}
-                    <!-- Repo tags is an array, only show if it is > 0 and show the first one -->
-                    {#if image.RepoTags && image.RepoTags.length > 0}
-                      <option value={image.RepoTags[0]}>{image.RepoTags[0]}</option>
-                    {/if}
-                  {/each}
-                {/if}
-              </select>
-              <!-- Position icon absolutely within the relative container -->
-              {#if bootcAvailableImages.length === 0}
-                <Fa
-                  class="absolute left-0 top-0 ml-2 mt-3 text-[var(--pd-state-warning)]"
-                  size="1x"
-                  icon={faTriangleExclamation} />
-              {:else if selectedImage}
-                <Fa class="absolute left-0 top-0 ml-2 mt-3 text-[var(--pd-state-success)]" size="1x" icon={faCube} />
-              {:else}
-                <Fa
-                  class="absolute left-0 top-0 ml-2 mt-3 text-[var(--pd-state-warning)]"
-                  size="1x"
-                  icon={faQuestionCircle} />
-              {/if}
-            </div>
+            <Dropdown
+              name="imageChoice"
+              ariaLabel="image-select"
+              bind:value={selectedImage}
+              options={bootcAvailableImages?.map(image => ({
+                label: image.RepoTags?.[0] ?? '',
+                value: image.RepoTags?.[0] ?? '',
+              }))}>
+            </Dropdown>
             {#if bootcAvailableImages.length === 0}
               <p class="text-[var(--pd-state-warning)] pt-1">
-                No bootable container compatible images found. Learn to create one on our <a
-                  class="text-purple-400 hover:bg-white hover:bg-opacity-10 transition-all rounded-[4px] p-0.5 no-underline cursor-pointer"
-                  href="https://github.com/containers/podman-desktop-extension-bootc">README</a
+                No bootable container compatible images found. Learn to create one on our <Link
+                  href="https://github.com/containers/podman-desktop-extension-bootc">README</Link
                 >.
               </p>
             {/if}
@@ -773,12 +753,12 @@ $: if (availableArchitectures) {
             </div>
             <div class="mb-2">
               <!-- Use a span for this until we have a "dropdown toggle" UI element implemented. -->
-              <!-- svelte-ignore a11y-click-events-have-key-events -->
-              <!-- svelte-ignore a11y-no-static-element-interactions -->
+              <!-- svelte-ignore a11y_click_events_have_key_events -->
+              <!-- svelte-ignore a11y_no_static_element_interactions -->
               <span
                 class="font-semibold mb-2 block cursor-pointer"
                 aria-label="build-config-options"
-                on:click={toggleBuildConfig}
+                onclick={toggleBuildConfig}
                 ><Fa icon={showBuildConfig ? faCaretDown : faCaretRight} class="inline-block mr-1" />Interactive build
                 config
               </span>
@@ -886,12 +866,12 @@ $: if (availableArchitectures) {
             </div>
             <div class="mb-2">
               <!-- Use a span for this until we have a "dropdown toggle" UI element implemented. -->
-              <!-- svelte-ignore a11y-click-events-have-key-events -->
-              <!-- svelte-ignore a11y-no-static-element-interactions -->
+               <!-- svelte-ignore a11y_click_events_have_key_events -->
+              <!-- svelte-ignore a11y_no_static_element_interactions -->
               <span
                 class="font-semibold mb-2 block cursor-pointer"
                 aria-label="build-config-options"
-                on:click={toggleBuildConfigFile}
+                onclick={toggleBuildConfigFile}
                 ><Fa icon={showBuildConfigFile ? faCaretDown : faCaretRight} class="inline-block mr-1" />Build config
                 file
               </span>
@@ -924,12 +904,12 @@ $: if (availableArchitectures) {
             </div>
             <div class="mb-2">
               <!-- Use a span for this until we have a "dropdown toggle" UI element implemented. -->
-              <!-- svelte-ignore a11y-click-events-have-key-events -->
-              <!-- svelte-ignore a11y-no-static-element-interactions -->
+               <!-- svelte-ignore a11y_click_events_have_key_events -->
+              <!-- svelte-ignore a11y_no_static_element_interactions -->
               <span
                 class="font-semibold mb-2 block cursor-pointer"
                 aria-label="advanced-options"
-                on:click={toggleAdvanced}
+                onclick={toggleAdvanced}
                 ><Fa icon={showAdvanced ? faCaretDown : faCaretRight} class="inline-block mr-1" />Advanced options
               </span>
               {#if showAdvanced}
