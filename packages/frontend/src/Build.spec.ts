@@ -28,6 +28,7 @@ import { router } from 'tinro';
 import userEvent from '@testing-library/user-event';
 import { historyInfo } from './stores/historyInfo';
 import type { Subscriber } from '/@shared/src/messages/MessageProxy';
+import { tick } from 'svelte';
 
 const mockHistoryInfo: BootcBuildInfo[] = [
   {
@@ -453,6 +454,11 @@ test('If inspectImage fails, do not select any architecture / make them availabl
     }
   });
 
+  console.log('test 1');
+
+  await tick();
+  console.log('test 2');
+
   const arm64 = screen.getByLabelText('arm64-select');
   expect(arm64).toBeDefined();
   expect(arm64).toBeDisabled();
@@ -460,6 +466,8 @@ test('If inspectImage fails, do not select any architecture / make them availabl
   const x86_64 = screen.getByLabelText('amd64-select');
   expect(x86_64).toBeDefined();
   expect(x86_64).toBeDisabled();
+
+  console.log('test 3');
 
   // Expect Architecture must be selected to be shown
   const validation = screen.getByRole('alert');

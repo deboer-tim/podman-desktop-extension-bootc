@@ -21,12 +21,15 @@ import Link from './lib/Link.svelte';
 import { historyInfo } from '/@/stores/historyInfo';
 import { goToDiskImages } from './lib/navigation';
 
-export let imageName: string | undefined = undefined;
-export let imageTag: string | undefined = undefined;
+interface Props {
+  imageName?: string;
+  imageTag?: string;
+}
+let { imageName, imageTag }: Props = $props();
 
 // Image variables
-let selectedImage: string | undefined;
-let existingBuild: boolean = false;
+let selectedImage = $state<string>();
+let existingBuild = $state(false);
 
 // Architecture variable
 // This is an array as we will be support manifests
@@ -34,54 +37,54 @@ let existingBuild: boolean = false;
 // we will ONLY enable the architectures that are available in the image / manifest within the form.
 // this is to prevent the user from selecting an architecture that is not available in the image.
 // Will either be 'arm64' or 'amd64' as that is all we support for now.
-let availableArchitectures: string[] = [];
+let availableArchitectures = $state<string[]>([]);
 
 // Build options
-let buildFolder: string;
-let buildConfigFile: string;
-let buildChown: string;
-let buildType: BuildType[] = [];
-let buildArch: string | undefined;
-let buildFilesystem: string = ''; // Default filesystem auto-selected / empty
-let overwrite: boolean = false;
+let buildFolder = $state<string>();
+let buildConfigFile = $state<string>();
+let buildChown = $state<string>();
+let buildType = $state<BuildType[]>([]);
+let buildArch = $state<string>();
+let buildFilesystem = $state<string>(''); // Default filesystem auto-selected / empty
+let overwrite = $state(false);
 
 // Other variable
-let buildInProgress = false;
-let bootcAvailableImages: ImageInfo[] = [];
-let buildErrorMessage = '';
-let errorFormValidation: string | undefined = undefined;
+let buildInProgress = $state(false);
+let bootcAvailableImages = $state<ImageInfo[]>([]);
+let buildErrorMessage = $state<string>('');
+let errorFormValidation = $state<string>();
 
 // Specific to root filesystem selection
 // SPECIFICALLY fedora, where we **need** to select the filesystem, as it is not auto-selected.
 // this boolean will be set to true if the selected image is Fedora and shown as a warning to the user.
-let fedoraDetected = false;
-let isLinux: boolean;
+let fedoraDetected = $state(false);
+let isLinux = $state<boolean>();
 
 // AWS Related
-let awsAmiName: string = '';
-let awsBucket: string = '';
-let awsRegion: string = '';
+let awsAmiName = $state<string>('');
+let awsBucket = $state<string>('');
+let awsRegion = $state<string>('');
 
 // Build Config related, we only support one entry for now
-let buildConfigUsers: { name: string; password: string; key: string; groups: string }[] = [
+let buildConfigUsers = $state<{ name: string; password: string; key: string; groups: string }[]>([
   { name: '', password: '', key: '', groups: '' },
-];
-let buildConfigFilesystems: { mountpoint: string; minsize: string }[] = [{ mountpoint: '', minsize: '' }];
-let buildConfigKernelArguments: string;
+]);
+let buildConfigFilesystems = $state<{ mountpoint: string; minsize: string }[]>([{ mountpoint: '', minsize: '' }]);
+let buildConfigKernelArguments = $state<string>();
 
 // Show/hide advanced options
-let showAdvanced = false; // State to show/hide advanced options
+let showAdvanced = $state(false); // State to show/hide advanced options
 function toggleAdvanced(): void {
   showAdvanced = !showAdvanced;
 }
 
 // Show/hide build config options
-let showBuildConfig = false;
+let showBuildConfig = $state(false);
 function toggleBuildConfig(): void {
   showBuildConfig = !showBuildConfig;
 }
 
-let showBuildConfigFile = false;
+let showBuildConfigFile = $state(false);
 function toggleBuildConfigFile(): void {
   showBuildConfigFile = !showBuildConfigFile;
 }
@@ -130,9 +133,12 @@ async function fillBuildOptions(historyInfo: BootcBuildInfo[] = []): Promise<voi
 }
 
 async function fillArchitectures(historyInfo: BootcBuildInfo[]): Promise<void> {
+  console.log('fillArchitectures 1');
+  console.log(buildArch);
   // If there is only one available architecture, select it automatically.
   if (availableArchitectures.length === 1) {
     buildArch = availableArchitectures[0];
+    console.log(buildArch);
     return;
   }
 
@@ -145,6 +151,8 @@ async function fillArchitectures(historyInfo: BootcBuildInfo[]): Promise<void> {
       buildArch = latestArch;
     }
   }
+  console.log('fillArchitectures 2');
+  console.log(buildArch);
 }
 
 // This will fill the chown function by getting the user and group ID from the OS
@@ -159,6 +167,7 @@ async function fillChownOption(): Promise<void> {
 }
 
 async function validate(): Promise<void> {
+  console.log('validate 0');
   let prereqs = await bootcClient.checkPrereqs();
   if (prereqs) {
     errorFormValidation = prereqs;
@@ -183,7 +192,8 @@ async function validate(): Promise<void> {
     existingBuild = false;
     return;
   }
-
+  console.log('validate 1');
+  console.log(buildArch);
   if (!buildArch) {
     errorFormValidation = 'Architecture must be selected';
     existingBuild = false;
@@ -198,7 +208,7 @@ async function validate(): Promise<void> {
   }
 
   // overwrite
-  existingBuild = await bootcClient.buildExists(buildFolder, buildType);
+  existingBuild = await bootcClient.buildExists(buildFolder, $state.snapshot(buildType));
   if (existingBuild && !overwrite) {
     errorFormValidation = 'Confirm overwriting existing build';
     return;
@@ -257,7 +267,7 @@ async function buildBootcImage(): Promise<void> {
     imageId: image?.Id ?? '',
     tag: selectedImage.split(':')[1],
     engineId: image?.engineId ?? '',
-    folder: buildFolder,
+    folder: buildFolder ?? '',
     // If all the entries are empty, we will not provide the buildConfig
     buildConfig,
     buildConfigFilePath: buildConfigFile,
@@ -274,6 +284,7 @@ async function buildBootcImage(): Promise<void> {
   // for Linux support as we are transfering the image to the root podman connection and an ID is needed.
   if (image?.isManifest) {
     try {
+      console.log('manifest 1');
       const manifest = await bootcClient.inspectManifest(image);
       const foundImages = await findImagesAssociatedToManifest(manifest);
 
@@ -401,6 +412,7 @@ onMount(async () => {
 
 /// Find the selected image and update availableArchitectures with the architecture of the image
 async function updateAvailableArchitectures(selectedImage: string): Promise<void> {
+  console.log('updateAvailableArchitectures');
   const image = findImage(selectedImage);
   if (image) {
     // If it is a manifest, we can just inspectManifest and get the architecture(s) from there
@@ -414,7 +426,9 @@ async function updateAvailableArchitectures(selectedImage: string): Promise<void
       }
     } else {
       try {
+        console.log('updateAvailableArchitectures 1');
         const imageInspect = await bootcClient.inspectImage(image);
+        console.log('updateAvailableArchitectures 2');
         // Architecture is a mandatory field in the image inspect and should **always** be there.
         if (imageInspect?.Architecture) {
           availableArchitectures = [imageInspect.Architecture];
@@ -441,8 +455,10 @@ async function detectFedoraImageFilesystem(selectedImage: string): Promise<void>
   // in order to get the labels used to determine if it's based on Fedora or not
   if (image?.isManifest) {
     try {
+      console.log('detectFedoraImageFilesystem 1');
       const manifest = await bootcClient.inspectManifest(image);
       const foundImages = await findImagesAssociatedToManifest(manifest);
+      console.log('detectFedoraImageFilesystem 2');
 
       // Just get the labels from the first image, as they should all be the same.
       imageLabels = foundImages[0].Labels;
@@ -483,29 +499,67 @@ async function updateBuildType(type: BuildType, selected: boolean): Promise<void
   await validate();
 }
 
-// validate every time a selection changes in the form or available architectures
-$: if (selectedImage || buildFolder || buildArch || overwrite) {
-  validate().catch((e: unknown) => console.error('error validating on change', e));
-}
-
 // Each time an image is selected, we need to update the available architectures
 // to do that, inspect the image and get the architecture.
-$: if (selectedImage) {
-  updateAvailableArchitectures(selectedImage).catch((e: unknown) => console.error('error updating architectures', e));
-  detectFedoraImageFilesystem(selectedImage).catch((e: unknown) => console.error('error detecting filesystem', e));
-}
-
-$: if (availableArchitectures) {
-  if (availableArchitectures.length === 1) {
-    // If there is only ONE available architecture, select it automatically.
-    buildArch = availableArchitectures[0];
-  } else if (availableArchitectures.length > 1 && buildArch && !availableArchitectures.includes(buildArch)) {
-    buildArch = undefined;
-  } else if (availableArchitectures.length === 0) {
-    // If none, disable buildArch selection regardless of what was selected before in history, etc.
-    buildArch = undefined;
+$effect(() => {
+  console.log('effect 1: ' + selectedImage);
+  if (selectedImage) {
+    updateAvailableArchitectures(selectedImage).catch((e: unknown) => console.error('error updating architectures', e));
+    detectFedoraImageFilesystem(selectedImage).catch((e: unknown) => console.error('error detecting filesystem', e));
+    validate().catch((e: unknown) => console.error('error validating on change', e));
   }
-}
+});
+
+$effect(() => {
+  console.log('effect 2: ' + availableArchitectures);
+  if (availableArchitectures) {
+    if (availableArchitectures.length === 1) {
+      // If there is only ONE available architecture, select it automatically.
+      buildArch = availableArchitectures[0];
+    } else if (availableArchitectures.length > 1 && buildArch && !availableArchitectures.includes(buildArch)) {
+      buildArch = undefined;
+    } else if (availableArchitectures.length === 0) {
+      // If none, disable buildArch selection regardless of what was selected before in history, etc.
+      buildArch = undefined;
+    }
+    validate().catch((e: unknown) => console.error('error validating on change', e));
+  }
+});
+
+// validate every time something changes in the form
+$effect(() => {
+  console.log('effect 3: ' + buildFolder + ' ' + overwrite);
+  //console.log('validating ' + overwrite);
+  //if (selectedImage || buildFolder || buildArch || overwrite) {
+  if (buildFolder || overwrite) {
+    //  if (selectedImage) {
+    validate().catch((e: unknown) => console.error('error validating on change', e));
+  }
+  /*if (buildFolder) {
+  validate().catch((e: unknown) => console.error('error validating on change', e));
+  }
+  if (buildArch) {
+  validate().catch((e: unknown) => console.error('error validating on change', e));
+  }
+  if (overwrite) {
+  validate().catch((e: unknown) => console.error('error validating on change', e));
+  }*/
+});
+/*$effect(() => {
+  if (buildFolder) {
+  validate().catch((e: unknown) => console.error('error validating on change', e));
+  }
+});
+$effect(() => {
+  if (buildArch) {
+  validate().catch((e: unknown) => console.error('error validating on change', e));
+  }
+});
+$effect(() => {
+  if (overwrite) {
+  validate().catch((e: unknown) => console.error('error validating on change', e));
+  }
+});*/
 </script>
 
 <FormPage
@@ -573,9 +627,8 @@ $: if (availableArchitectures) {
             </div>
             {#if bootcAvailableImages.length === 0}
               <p class="text-[var(--pd-state-warning)] pt-1">
-                No bootable container compatible images found. Learn to create one on our <a
-                  class="text-purple-400 hover:bg-white hover:bg-opacity-10 transition-all rounded-[4px] p-0.5 no-underline cursor-pointer"
-                  href="https://github.com/containers/podman-desktop-extension-bootc">README</a
+                No bootable container compatible images found. Learn to create one on our <Link
+                  externalRef="https://github.com/containers/podman-desktop-extension-bootc">README</Link
                 >.
               </p>
             {/if}
@@ -773,12 +826,12 @@ $: if (availableArchitectures) {
             </div>
             <div class="mb-2">
               <!-- Use a span for this until we have a "dropdown toggle" UI element implemented. -->
-              <!-- svelte-ignore a11y-click-events-have-key-events -->
-              <!-- svelte-ignore a11y-no-static-element-interactions -->
+              <!-- svelte-ignore a11y_click_events_have_key_events -->
+              <!-- svelte-ignore a11y_no_static_element_interactions -->
               <span
                 class="font-semibold mb-2 block cursor-pointer"
                 aria-label="build-config-options"
-                on:click={toggleBuildConfig}
+                onclick={toggleBuildConfig}
                 ><Fa icon={showBuildConfig ? faCaretDown : faCaretRight} class="inline-block mr-1" />Interactive build
                 config
               </span>
@@ -886,12 +939,12 @@ $: if (availableArchitectures) {
             </div>
             <div class="mb-2">
               <!-- Use a span for this until we have a "dropdown toggle" UI element implemented. -->
-              <!-- svelte-ignore a11y-click-events-have-key-events -->
-              <!-- svelte-ignore a11y-no-static-element-interactions -->
+              <!-- svelte-ignore a11y_click_events_have_key_events -->
+              <!-- svelte-ignore a11y_no_static_element_interactions -->
               <span
                 class="font-semibold mb-2 block cursor-pointer"
                 aria-label="build-config-options"
-                on:click={toggleBuildConfigFile}
+                onclick={toggleBuildConfigFile}
                 ><Fa icon={showBuildConfigFile ? faCaretDown : faCaretRight} class="inline-block mr-1" />Build config
                 file
               </span>
@@ -924,12 +977,12 @@ $: if (availableArchitectures) {
             </div>
             <div class="mb-2">
               <!-- Use a span for this until we have a "dropdown toggle" UI element implemented. -->
-              <!-- svelte-ignore a11y-click-events-have-key-events -->
-              <!-- svelte-ignore a11y-no-static-element-interactions -->
+              <!-- svelte-ignore a11y_click_events_have_key_events -->
+              <!-- svelte-ignore a11y_no_static_element_interactions -->
               <span
                 class="font-semibold mb-2 block cursor-pointer"
                 aria-label="advanced-options"
-                on:click={toggleAdvanced}
+                onclick={toggleAdvanced}
                 ><Fa icon={showAdvanced ? faCaretDown : faCaretRight} class="inline-block mr-1" />Advanced options
               </span>
               {#if showAdvanced}
@@ -1003,7 +1056,11 @@ $: if (availableArchitectures) {
         {#if buildInProgress}
           <Button class="w-full" disabled={true}>Creating build task</Button>
         {:else}
-          <Button on:click={buildBootcImage} disabled={errorFormValidation !== undefined} class="w-full">Build</Button>
+          <Button
+            on:click={buildBootcImage}
+            disabled={errorFormValidation !== undefined}
+            aria-label={errorFormValidation}
+            class="w-full">Build</Button>
           <!-- If on Linux, warn that during the build, credentials will be asked in order to run an escalated privileged build prompt -->
           {#if isLinux}
             <p class="text-sm text-[var(--pd-content-text)] pt-1">
