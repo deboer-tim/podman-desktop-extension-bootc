@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  ***********************************************************************/
 
-import { type Disposable, type Webview } from '@podman-desktop/api';
+import type { Disposable, Webview } from '@podman-desktop/api';
 import * as podmanDesktopApi from '@podman-desktop/api';
 import path from 'node:path';
 import { Messages } from '/@shared/src/messages/Messages';

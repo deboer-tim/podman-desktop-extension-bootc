@@ -21,7 +21,7 @@ async function openURL(): Promise<void> {
 
 onMount(async () => {
   // Get all the examples
-  let examples = await bootcClient.getExamples();
+  const examples = await bootcClient.getExamples();
 
   // Find the example with the given id
   const foundExample = examples.examples.find(example => example.id === id);

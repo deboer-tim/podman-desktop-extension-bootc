@@ -14,7 +14,7 @@ const UNCLASSIFIED: Category = {
 
 onMount(async () => {
   // onmount get the examples
-  let examples = await bootcClient.getExamples();
+  const examples = await bootcClient.getExamples();
 
   const categoryDict = Object.fromEntries(examples.categories.map((category: Category) => [category.id, category]));
 
