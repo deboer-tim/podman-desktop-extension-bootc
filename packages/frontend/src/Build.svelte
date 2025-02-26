@@ -3,8 +3,6 @@ import './app.css';
 import {
   faCaretDown,
   faCaretRight,
-  faCube,
-  faQuestionCircle,
   faTriangleExclamation,
   faMinusCircle,
   faPlusCircle,
@@ -21,7 +19,7 @@ import { onMount } from 'svelte';
 import type { ImageInfo, ManifestInspectInfo } from '@podman-desktop/api';
 import { router } from 'tinro';
 import DiskImageIcon from './lib/DiskImageIcon.svelte';
-import { Button, Input, EmptyScreen, FormPage, Checkbox, ErrorMessage } from '@podman-desktop/ui-svelte';
+import { Button, Input, EmptyScreen, FormPage, Checkbox, ErrorMessage, Dropdown } from '@podman-desktop/ui-svelte';
 import Link from './lib/Link.svelte';
 import { historyInfo } from '/@/stores/historyInfo';
 import { goToDiskImages } from './lib/navigation';
@@ -583,41 +581,15 @@ $: if (availableArchitectures) {
         <div class={buildInProgress ? 'opacity-40 pointer-events-none' : ''}>
           <div class="pb-4">
             <label for="modalImageTag" class="block mb-2 font-semibold">Bootable container image</label>
-            <div class="relative">
-              <!-- Container with relative positioning -->
-              <select
-                class="rounded-lg block w-full p-2.5 bg-charcoal-600 pl-8 border-r-8 border-transparent outline-1 outline outline-gray-900 placeholder-gray-700 text-white"
-                name="imageChoice"
-                aria-label="image-select"
-                bind:value={selectedImage}>
-                <!-- Options go here -->
-                {#if !selectedImage}
-                  <option value="" disabled selected>Select an image</option>
-                {/if}
-                {#if bootcAvailableImages.length > 0}
-                  {#each bootcAvailableImages as image}
-                    <!-- Repo tags is an array, only show if it is > 0 and show the first one -->
-                    {#if image.RepoTags && image.RepoTags.length > 0}
-                      <option value={image.RepoTags[0]}>{image.RepoTags[0]}</option>
-                    {/if}
-                  {/each}
-                {/if}
-              </select>
-              <!-- Position icon absolutely within the relative container -->
-              {#if bootcAvailableImages.length === 0}
-                <Fa
-                  class="absolute left-0 top-0 ml-2 mt-3 text-[var(--pd-state-warning)]"
-                  size="1x"
-                  icon={faTriangleExclamation} />
-              {:else if selectedImage}
-                <Fa class="absolute left-0 top-0 ml-2 mt-3 text-[var(--pd-state-success)]" size="1x" icon={faCube} />
-              {:else}
-                <Fa
-                  class="absolute left-0 top-0 ml-2 mt-3 text-[var(--pd-state-warning)]"
-                  size="1x"
-                  icon={faQuestionCircle} />
-              {/if}
-            </div>
+            <Dropdown
+              name="imageChoice"
+              ariaLabel="image-select"
+              bind:value={selectedImage}
+              options={bootcAvailableImages?.map(image => ({
+                label: image.RepoTags?.[0] ?? '',
+                value: image.RepoTags?.[0] ?? '',
+              }))}>
+            </Dropdown>
             {#if bootcAvailableImages.length === 0}
               <p class="text-[var(--pd-state-warning)] pt-1">
                 No bootable container compatible images found. Learn to create one on our <Link
