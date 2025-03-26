@@ -210,7 +210,7 @@ export default [
   },
 
   {
-    files: ['**/*.svelte'],
+    files: ['**/*.svelte', '**/*.svelte.ts'],
 
     languageOptions: {
       parser: svelteParser,

@@ -85,8 +85,7 @@ export class BootcApiImpl implements BootcApi {
       // the error when running the command.
       let errorMessage: string;
       if (e instanceof Error) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        errorMessage = `${e.message} ${'stderr' in e ? (e as any).stderr : ''}`;
+        errorMessage = `${e.message} ${'stderr' in e ? e?.stderr : ''}`;
       } else {
         errorMessage = String(e);
       }

@@ -349,8 +349,10 @@ export async function buildDiskImage(build: BootcBuildInfo, history: History, ov
 async function logContainer(
   engineId: string,
   containerId: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  progress: any,
+  progress: extensionApi.Progress<{
+    message?: string;
+    increment?: number;
+  }>,
   callback: (data: string) => void,
 ): Promise<void> {
   await extensionApi.containerEngine.logsContainer(engineId, containerId, (_name: string, data: string) => {

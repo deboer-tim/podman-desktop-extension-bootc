@@ -510,8 +510,7 @@ test('test createBuildConfigJSON function works when passing in a build config w
     },
   } as BuildConfig;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const buildConfigJson: Record<string, any> = createBuildConfigJSON(buildConfig);
+  const buildConfigJson: Record<string, unknown> = createBuildConfigJSON(buildConfig);
   expect(buildConfigJson).toBeDefined();
 
   // buildConfigJson is Record<string, unknown>, but check that the first one is 'customnizations'
