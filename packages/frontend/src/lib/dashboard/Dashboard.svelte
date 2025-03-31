@@ -29,7 +29,6 @@ const bootcImageBuilderSite = 'https://github.com/osbuild/bootc-image-builder';
 const bootcSite = 'https://bootc-dev.github.io/bootc/';
 const fedoraBaseImages = 'https://docs.fedoraproject.org/en-US/bootc/base-images/';
 const extensionSite = 'https://github.com/containers/podman-desktop-extension-bootc';
-const rhdImageMode = './RHD.png';
 
 async function gotoBuild(): Promise<void> {
   // Split the image name to get the image name and tag

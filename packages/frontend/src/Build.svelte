@@ -398,7 +398,7 @@ function removeEmptyStrings<T>(obj: T): T | undefined {
     // Filter out empty strings, then check if array is empty
     const filteredArray = obj.map(removeEmptyStrings).filter(value => value !== '' && value !== undefined);
     return (filteredArray.length > 0 ? filteredArray : undefined) as T | undefined;
-  } else if (obj !== undefined && typeof obj === 'object') {
+  } else if (obj && typeof obj === 'object') {
     const filteredObject = Object.fromEntries(
       Object.entries(obj ?? {})
         .map(([key, value]) => [key, removeEmptyStrings(value)])

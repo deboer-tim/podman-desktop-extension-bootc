@@ -27,7 +27,6 @@ let termFit = $state<FitAddon>();
 let attachAddon = $state<AttachAddon>();
 let logsTerminal = $state<Terminal>();
 let socket = $state<WebSocket>();
-let launchInProgress = $state(false);
 
 // Status information regarding any VM launch errors (since we subscribe and get the notification)
 let connectionStatus = $state('');
@@ -41,11 +40,11 @@ const GUIDE_LINK = 'https://github.com/containers/podman-desktop-extension-bootc
 
 // Event handlers for the WebSocket connection
 // which are needed to update the connection status
-function closeHandler(event: CloseEvent): void {
+function closeHandler(_event: CloseEvent): void {
   connectionStatus = 'VM stopped';
 }
 
-function openHandler(event: Event): void {
+function openHandler(_event: Event): void {
   connectionStatus = 'VM started';
   noLogs = false;
 }
@@ -181,8 +180,6 @@ async function initTerminal(): Promise<void> {
 
 // Launch the VM with the folder location and architecture required.
 async function launchVM(build: BootcBuildInfo): Promise<void> {
-  launchInProgress = true;
-
   // This is launched IN THE BACKGROUND. We do not wait for the VM to boot before showing the terminal.
   // we instead are notified by subscribing to Messages.MSG_VM_LAUNCH_ERROR messages from RPC
   bootcClient.launchVM(build.id).catch((e: unknown) => console.error('error launching VM', e));

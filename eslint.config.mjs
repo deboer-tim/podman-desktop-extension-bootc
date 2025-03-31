@@ -210,7 +210,7 @@ export default [
   },
 
   {
-    files: ['**/*.svelte'],
+    files: ['**/*.svelte', '**/*.svelte.ts'],
 
     languageOptions: {
       parser: svelteParser,
@@ -222,17 +222,9 @@ export default [
     },
 
     rules: {
-      eqeqeq: 'off',
-      'etc/no-implicit-any-catch': 'off',
-      'no-inner-declarations': 'off',
-      'sonarjs/code-eval': 'off',
-      'sonarjs/different-types-comparison': 'off',
-      'sonarjs/prefer-nullish-coalescing': 'off',
-      'sonarjs/no-nested-template-literals': 'off',
       'sonarjs/no-nested-conditional': 'off',
-      '@typescript-eslint/no-unused-vars': 'off',
-      '@typescript-eslint/ban-types': 'off',
       '@typescript-eslint/no-unused-expressions': 'off',
+      'svelte/no-reactive-literals': 'error',
     },
   },
 
